@@ -12,7 +12,7 @@
 
 ## 1. Executive Summary
 
-EventSphere is an enterprise-grade event booking and management platform engineered to resolve the fragmentation present in modern event orchestration software. The platform unifies high-concurrency ticket reservation systems, real-time analytics, and role-based operational dashboards into a single ecosystem. It is designed for high availability, fault tolerance, and strict data consistency.
+Event booking platform is an enterprise-grade event booking and management platform engineered to resolve the fragmentation present in modern event orchestration software. The platform unifies high-concurrency ticket reservation systems, real-time analytics, and role-based operational dashboards into a single ecosystem. It is designed for high availability, fault tolerance, and strict data consistency.
 
 <br>
 <hr>
