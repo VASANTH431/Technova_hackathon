@@ -63,4 +63,46 @@ router.post('/verify-payment', async (req, res) => {
     }
 });
 
+// Razorpay Webhook Endpoint
+router.post('/webhook', async (req, res) => {
+    try {
+        const secret = process.env.RAZORPAY_WEBHOOK_SECRET || 'YOUR_RAZORPAY_WEBHOOK_SECRET';
+        
+        // We use req.rawBody which we captured in server.js to ensure the signature matches perfectly
+        const body = req.rawBody;
+        const signature = req.headers['x-razorpay-signature'];
+        
+        // Use Razorpay utility to validate the signature
+        const isValid = Razorpay.validateWebhookSignature(body, signature, secret);
+        
+        if (isValid) {
+            console.log("Webhook signature is valid!");
+            
+            // Process the event
+            const event = req.body.event;
+            const payload = req.body.payload;
+            
+            if (event === 'payment.captured') {
+                const payment = payload.payment.entity;
+                console.log("✅ Payment captured successfully for Order:", payment.order_id);
+                // 🚀 TODO: Update database Registration model
+                // Example: await Registration.findOneAndUpdate({ orderId: payment.order_id }, { paymentStatus: 'Paid' });
+            } else if (event === 'payment.failed') {
+                const payment = payload.payment.entity;
+                console.log("❌ Payment failed for Order:", payment.order_id);
+                // 🚀 TODO: Handle failed payment in database
+            }
+            
+            // Acknowledge receipt to Razorpay so it stops retrying
+            res.status(200).json({ status: 'ok' });
+        } else {
+            console.error("Invalid Webhook Signature!");
+            res.status(400).json({ status: 'error', message: 'Invalid signature' });
+        }
+    } catch (err) {
+        console.error("Webhook Error:", err);
+        res.status(500).json({ status: 'error', message: err.message });
+    }
+});
+
 module.exports = router;
