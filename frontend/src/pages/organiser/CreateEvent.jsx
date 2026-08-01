@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Upload, ArrowRight, Save, Info, Users, Clock, CalendarDays, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,8 +33,12 @@ class ErrorBoundary extends React.Component {
 const CreateEventComponent = () => {
     const navigate = useNavigate();
     const { id } = useParams();
+    const location = useLocation();
     const isEditMode = Boolean(id);
-    const [step, setStep] = useState(1);
+
+    const queryParams = new URLSearchParams(location.search);
+    const initialStep = Number(queryParams.get('step')) || 1;
+    const [step, setStep] = useState(initialStep);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -64,10 +68,10 @@ const CreateEventComponent = () => {
     const [certificateConfig, setCertificateConfig] = useState({
         enabled: false,
         fields: [
-            { name: 'participant_name', x: 200, y: 300, fontSize: 32, color: '#000000', label: 'Participant Name' },
-            { name: 'event_name', x: 200, y: 350, fontSize: 24, color: '#4f46e5', label: 'Event Name' },
-            { name: 'date', x: 200, y: 400, fontSize: 18, color: '#64748b', label: 'Issue Date' },
-            { name: 'certificate_id', x: 200, y: 450, fontSize: 14, color: '#94a3b8', label: 'Certificate ID' }
+            { name: 'participant_name', align: 'center', x: 200, y: 300, fontSize: 32, color: '#000000', label: 'Participant Name' },
+            { name: 'event_name', x: 200, y: 350, fontSize: 24, color: '#4f46e5', label: '' },
+            { name: 'date', x: 200, y: 400, fontSize: 18, color: '#64748b', label: '' },
+            { name: 'certificate_id', x: 200, y: 450, fontSize: 14, color: '#94a3b8', label: '' }
         ]
     });
 
@@ -369,21 +373,26 @@ const CreateEventComponent = () => {
 
                                                 <div className="space-y-4">
                                                     {certificateConfig.fields.map((field, idx) => (
-                                                        <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                                        <div key={idx} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center bg-slate-50 p-4 rounded-lg border border-slate-100 relative">
                                                             <div className="col-span-1 border-r border-slate-200">
-                                                                <span className="font-semibold text-slate-700 text-sm">{field.label}</span>
+                                                                <span className={`font-semibold text-sm ${field.x === -1 ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{field.label}</span>
                                                             </div>
                                                             <div className="col-span-1 flex gap-2 items-center">
                                                                 <span className="text-xs font-bold text-slate-400">X:</span>
-                                                                <input type="number" value={field.x} onChange={e => { const newF = [...certificateConfig.fields]; newF[idx].x = Number(e.target.value); setCertificateConfig({ ...certificateConfig, fields: newF }) }} className="w-full text-sm form-input rounded-md border-slate-300" />
+                                                                <input type="number" disabled={field.x === -1} value={field.x === -1 ? 0 : field.x} onChange={e => { const newF = [...certificateConfig.fields]; newF[idx].x = Number(e.target.value); setCertificateConfig({ ...certificateConfig, fields: newF }) }} className="w-full text-sm form-input rounded-md border-slate-300 disabled:bg-slate-200" />
                                                             </div>
                                                             <div className="col-span-1 flex gap-2 items-center">
                                                                 <span className="text-xs font-bold text-slate-400">Y:</span>
-                                                                <input type="number" value={field.y} onChange={e => { const newF = [...certificateConfig.fields]; newF[idx].y = Number(e.target.value); setCertificateConfig({ ...certificateConfig, fields: newF }) }} className="w-full text-sm form-input rounded-md border-slate-300" />
+                                                                <input type="number" disabled={field.x === -1} value={field.x === -1 ? 0 : field.y} onChange={e => { const newF = [...certificateConfig.fields]; newF[idx].y = Number(e.target.value); setCertificateConfig({ ...certificateConfig, fields: newF }) }} className="w-full text-sm form-input rounded-md border-slate-300 disabled:bg-slate-200" />
                                                             </div>
                                                             <div className="col-span-1 flex gap-2 items-center">
                                                                 <span className="text-xs font-bold text-slate-400">Pt:</span>
-                                                                <input type="number" value={field.fontSize} onChange={e => { const newF = [...certificateConfig.fields]; newF[idx].fontSize = Number(e.target.value); setCertificateConfig({ ...certificateConfig, fields: newF }) }} className="w-full text-sm form-input rounded-md border-slate-300" />
+                                                                <input type="number" disabled={field.x === -1} value={field.x === -1 ? 0 : field.fontSize} onChange={e => { const newF = [...certificateConfig.fields]; newF[idx].fontSize = Number(e.target.value); setCertificateConfig({ ...certificateConfig, fields: newF }) }} className="w-full text-sm form-input rounded-md border-slate-300 disabled:bg-slate-200" />
+                                                            </div>
+                                                            <div className="col-span-1 flex justify-end">
+                                                                <button type="button" onClick={() => { const newF = [...certificateConfig.fields]; newF[idx].x = field.x === -1 ? 200 : -1; setCertificateConfig({ ...certificateConfig, fields: newF }); }} className={`text-xs px-3 py-1.5 rounded-md font-bold transition-colors ${field.x === -1 ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'bg-red-100 text-red-700 hover:bg-red-200'}`}>
+                                                                    {field.x === -1 ? 'Enable' : 'Disable'}
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     ))}

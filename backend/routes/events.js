@@ -155,8 +155,8 @@ router.put('/:id/complete', authMiddleware, restrictTo('Organiser', 'Admin'), as
             return res.status(403).json({ error: 'Not authorized to complete this event' });
         }
 
-        if (event.status !== 'Ongoing') {
-            return res.status(400).json({ error: 'Only ongoing events can be marked as completed' });
+        if (event.status !== 'Ongoing' && event.status !== 'Published') {
+            return res.status(400).json({ error: 'Only Published or Ongoing events can be marked as completed' });
         }
 
         event.status = 'Completed';

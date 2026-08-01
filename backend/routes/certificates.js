@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const { PDFDocument, rgb } = require('pdf-lib');
+const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
 const archiver = require('archiver');
@@ -65,7 +65,15 @@ router.post('/generate/:eventId', authMiddleware, restrictTo('Organiser', 'Admin
 
         for (const reg of eligibleRegistrations) {
             const existingCert = await Certificate.findOne({ event: eventId, user: reg.user._id });
-            if (existingCert) continue; // Prevent duplicates
+            if (existingCert) {
+                try {
+                    const oldPath = path.join(__dirname, '..', existingCert.pdfUrl);
+                    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+                } catch (e) {
+                    console.error('Failed to cleanup old certificate file', e);
+                }
+                await existingCert.deleteOne();
+            }
 
             const certId = uuidv4().split('-')[0].toUpperCase() + '-' + Date.now().toString().slice(-6);
 
@@ -109,19 +117,40 @@ router.post('/generate/:eventId', authMiddleware, restrictTo('Organiser', 'Admin
                 height: 80,
             });
 
-            // Overlay Texts based on fields mapping
+            // Embed the Professional Font
+            const customFont = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+
+            // Group fields by exact Y coordinate to prevent overlapping text elements
+            const groupsByY = {};
             for (const field of event.certificateConfig.fields) {
-                let text = field.name === 'certificate_id' ? certId : getFieldValue(field.name, reg, event);
+                if (!groupsByY[field.y]) {
+                    groupsByY[field.y] = { fields: [], x: field.x, fontSize: field.fontSize || 24 };
+                }
+                groupsByY[field.y].fields.push(field);
+            }
 
-                // Note: PDF coordinate system (0,0) is bottom-left. Frontend usually top-left.
-                // Assuming frontend sends (X,Y) from top-left.
-                const yPos = pageHeight - field.y;
+            // Overlay Texts
+            for (const yPos of Object.keys(groupsByY)) {
+                const group = groupsByY[yPos];
 
-                page.drawText(text || '', {
-                    x: field.x,
-                    y: yPos,
-                    size: field.fontSize || 24,
-                    color: rgb(0, 0, 0) // Could parse hex to rgb here if strict
+                // Extract strings for this Y coordinate and join them by comma
+                const strings = group.fields.map(field => {
+                    let txt = field.name === 'certificate_id' ? certId : getFieldValue(field.name, reg, event);
+                    return txt || '';
+                }).filter(t => t.length > 0);
+
+                const joinedText = strings.join(', ');
+
+                // Center align the joined text
+                const textWidth = customFont.widthOfTextAtSize(joinedText, group.fontSize);
+                const centeredX = group.x - (textWidth / 2);
+
+                page.drawText(joinedText, {
+                    x: centeredX,
+                    y: Number(yPos),
+                    size: group.fontSize,
+                    font: customFont,
+                    color: rgb(0, 0, 0)
                 });
             }
 

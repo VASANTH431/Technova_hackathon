@@ -44,24 +44,32 @@ const MyCertificates = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {certificates.map((cert) => (
                 <motion.div key={cert._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[2rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 group">
-                    <div className="h-32 bg-gradient-to-br from-indigo-500 to-purple-600 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-black/10"></div>
-                        <div className="absolute -bottom-10 -right-10 opacity-20 transform group-hover:scale-125 transition-transform duration-700">
-                            <Award size={120} />
-                        </div>
+                    <div className="h-40 bg-slate-100 relative overflow-hidden group-hover:opacity-90 transition-opacity flex items-center justify-center">
+                        {cert.event.certificateConfig?.templateUrl ? (
+                            <img src={`http://localhost:5000${cert.event.certificateConfig.templateUrl}`} className="w-full h-full object-cover opacity-90 mix-blend-multiply" alt="Certificate Background" />
+                        ) : (
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600"></div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                     </div>
 
                     <div className="px-6 pb-6 relative">
-                        <div className="absolute -top-10 left-6 h-20 w-20 bg-white rounded-2xl shadow-xl flex items-center justify-center border-4 border-slate-50">
-                            <img src={cert.qrCodeUrl} alt="QR" className="h-16 w-16" />
+                        <div className="absolute -top-12 left-6 h-24 w-24 bg-white rounded-2xl shadow-xl flex items-center justify-center border-4 border-slate-50 overflow-hidden">
+                            <img src={cert.qrCodeUrl} alt="QR" className="h-full w-full object-cover mix-blend-multiply scale-110" />
                         </div>
 
-                        <div className="mt-14">
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center">
-                                Issued: {new Date(cert.issueDate).toLocaleDateString()}
-                            </p>
-                            <h4 className="text-xl font-bold text-slate-800 line-clamp-2">{cert.event.title}</h4>
-                            <p className="text-sm text-slate-500 mt-1 flex items-center">
+                        <div className="pt-14 ml-0">
+                            <div className="flex flex-col gap-1 items-end -mt-16 text-right mb-6 relative z-10 text-white drop-shadow-md">
+                                <p className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                                    Issued
+                                </p>
+                                <p className="font-semibold text-sm">
+                                    {new Date(cert.issueDate).toLocaleDateString()}
+                                </p>
+                            </div>
+
+                            <h4 className="text-2xl font-bold text-slate-800 line-clamp-2 mt-4">{cert.event.title}</h4>
+                            <p className="text-sm font-semibold text-indigo-600 mt-1 flex items-center">
                                 By {cert.event.organiserName || 'Organizer'}
                             </p>
                         </div>

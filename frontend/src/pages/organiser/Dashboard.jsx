@@ -152,7 +152,13 @@ const EventListItem = ({ event, onUpdateEvent }) => {
                     <Link to={`/events/${event._id}`} className="text-indigo-600 hover:text-indigo-900 font-medium px-4 py-2 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors shadow-sm border border-indigo-200">
                         View Page
                     </Link>
-                    {event.status === 'Ongoing' && (
+                    <Link to={`/organiser/edit-event/${event._id}?step=4`} className="text-purple-600 hover:text-purple-900 font-medium px-4 py-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors shadow-sm border border-purple-200 flex items-center">
+                        <Award className="w-4 h-4 mr-1.5" /> Certificates
+                    </Link>
+                    <Link to={`/organiser/edit-event/${event._id}`} className="text-amber-600 hover:text-amber-900 font-medium px-4 py-2 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors shadow-sm border border-amber-200">
+                        Edit
+                    </Link>
+                    {(event.status === 'Ongoing' || event.status === 'Published') && (
                         <button onClick={() => setShowConfirmModal(true)} className="text-emerald-700 hover:text-emerald-900 font-medium px-4 py-2 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors shadow-sm flex items-center border border-emerald-200 shadow-xl">
                             <CheckCircle className="h-4 w-4 mr-2" /> Mark as Completed
                         </button>
