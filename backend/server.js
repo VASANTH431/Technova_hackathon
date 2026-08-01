@@ -21,6 +21,7 @@ app.use('/api/registrations', registrationRoutes);
 app.use('/api/user', require('./routes/user'));
 app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/payments', require('./routes/payments'));
 
 // Serve uploads statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
