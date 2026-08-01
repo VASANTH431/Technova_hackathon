@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { GoogleLogin } from '@react-oauth/google';
 import { motion } from 'framer-motion';
-import { User, Mail, Briefcase, Phone, Lock, Tag } from 'lucide-react';
+import { User, Mail, Briefcase, Phone, Lock, Tag, MapPin } from 'lucide-react';
 
 const SignUp = () => {
     const navigate = useNavigate();
@@ -12,6 +11,7 @@ const SignUp = () => {
         email: '',
         password: '',
         phoneNumber: '',
+        location: '',
         interestedAreas: [],
         role: 'User'
     });
@@ -57,32 +57,6 @@ const SignUp = () => {
         }
     };
 
-    const handleGoogleSuccess = async (credentialResponse) => {
-        try {
-            const res = await axios.post('http://localhost:5000/api/auth/google', {
-                token: credentialResponse.credential,
-                role: formData.role
-            });
-
-            if (res.data.token) {
-                localStorage.setItem('token', res.data.token);
-                localStorage.setItem('user', JSON.stringify(res.data.user));
-
-                if (res.data.user.role === 'Organiser') {
-                    navigate('/organiser-dashboard');
-                } else {
-                    navigate('/user-dashboard');
-                }
-            }
-        } catch (err) {
-            setError(err.response?.data?.error || 'Google Sign Up Failed');
-        }
-    };
-
-    const handleGoogleError = () => {
-        setError('Google Sign Up Failed');
-    };
-
     return (
         <div className="min-h-screen flex items-center justify-center pt-16 relative bg-slate-50 py-10">
             <div className="absolute top-10 left-10 w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
@@ -105,33 +79,24 @@ const SignUp = () => {
                 {error && <div className="p-3 mb-6 bg-red-100 text-red-700 rounded-lg text-sm font-medium">{error}</div>}
 
                 <div className="mb-6 flex flex-col items-center justify-center max-w-md mx-auto">
-                    <p className="text-sm font-medium text-slate-700 mb-3 block w-full text-left">Select Account Type first, then Sign Up:</p>
+                    <p className="text-sm font-medium text-slate-700 mb-3 block w-full text-left">Select Account Type:</p>
                     <div className="w-full relative mb-4">
                         <Briefcase className="absolute left-3 top-3.5 text-slate-400" size={18} />
                         <select
                             name="role"
                             value={formData.role}
-                            onChange={handleInputChange}
+                            onChange={(e) => {
+                                if (e.target.value === 'Organiser') {
+                                    setFormData({ ...formData, role: e.target.value, interestedAreas: [] });
+                                } else {
+                                    setFormData({ ...formData, role: e.target.value });
+                                }
+                            }}
                             className="w-full bg-white/50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-blue-400 transition-all shadow-sm appearance-none"
                         >
                             <option value="User">Participant</option>
                             <option value="Organiser">Organiser</option>
                         </select>
-                    </div>
-
-                    <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={handleGoogleError}
-                        theme="filled_blue"
-                        shape="pill"
-                        size="large"
-                        text="signup_with"
-                    />
-
-                    <div className="w-full relative flex items-center my-6 py-2">
-                        <div className="flex-grow border-t border-slate-200"></div>
-                        <span className="flex-shrink-0 mx-4 text-slate-400 text-sm">Or fill details manually</span>
-                        <div className="flex-grow border-t border-slate-200"></div>
                     </div>
                 </div>
 
@@ -200,26 +165,43 @@ const SignUp = () => {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
-                            <Tag size={16} className="text-slate-500" />
-                            Select Interested Areas
-                        </label>
-                        <div className="flex flex-wrap gap-2">
-                            {interestOptions.map((area) => (
-                                <button
-                                    type="button"
-                                    key={area}
-                                    onClick={() => handleInterestChange(area)}
-                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${formData.interestedAreas.includes(area)
-                                            ? 'bg-blue-600 text-white shadow-md'
-                                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                                        }`}
-                                >
-                                    {area}
-                                </button>
-                            ))}
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Location / General Area</label>
+                        <div className="relative">
+                            <MapPin className="absolute left-3 top-3.5 text-slate-400" size={18} />
+                            <input
+                                type="text"
+                                name="location"
+                                value={formData.location}
+                                onChange={handleInputChange}
+                                className="w-full bg-white/50 border border-slate-200 rounded-xl py-3 pl-10 pr-4 outline-none focus:ring-2 focus:ring-blue-400 transition-all shadow-sm"
+                                placeholder="Your City or Location"
+                            />
                         </div>
                     </div>
+
+                    {formData.role === 'User' && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-3 flex items-center gap-2">
+                                <Tag size={16} className="text-slate-500" />
+                                Select Interested Areas
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {interestOptions.map((area) => (
+                                    <button
+                                        type="button"
+                                        key={area}
+                                        onClick={() => handleInterestChange(area)}
+                                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${formData.interestedAreas.includes(area)
+                                            ? 'bg-blue-600 text-white shadow-md'
+                                            : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                            }`}
+                                    >
+                                        {area}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex justify-center mt-8">
                         <button

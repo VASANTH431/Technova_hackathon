@@ -10,9 +10,9 @@ const upload = require('../middleware/upload');
 router.get('/', authMiddleware, async (req, res) => {
     try {
         let filter = {};
-        // Users only see published events. Admins and Organisers see all.
+        // Users only see published or ongoing events. Admins and Organisers see all.
         if (req.user.role === 'User') {
-            filter.status = 'Published';
+            filter.status = { $in: ['Published', 'Ongoing'] };
         }
 
         const events = await Event.find(filter).sort({ createdAt: -1 });
@@ -38,7 +38,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
 // @route   POST /api/events
 // @desc    Create a new event
 // @access  Organiser / Admin
-router.post('/', authMiddleware, restrictTo('Organiser', 'Admin'), upload.fields([{ name: 'bannerImage', maxCount: 1 }, { name: 'pptTemplate', maxCount: 1 }]), async (req, res) => {
+router.post('/', authMiddleware, restrictTo('Organiser', 'Admin'), upload.fields([{ name: 'bannerImage', maxCount: 1 }, { name: 'pptTemplate', maxCount: 1 }, { name: 'certificateTemplate', maxCount: 1 }]), async (req, res) => {
     try {
         const eventData = req.body;
 
@@ -48,6 +48,10 @@ router.post('/', authMiddleware, restrictTo('Organiser', 'Admin'), upload.fields
             }
             if (req.files.pptTemplate) {
                 eventData.pptTemplateUrl = '/uploads/' + req.files.pptTemplate[0].filename;
+            }
+            if (req.files.certificateTemplate) {
+                if (!eventData.certificateConfig) eventData.certificateConfig = {};
+                eventData.certificateConfig.templateUrl = '/uploads/' + req.files.certificateTemplate[0].filename;
             }
         }
 
@@ -70,7 +74,7 @@ router.post('/', authMiddleware, restrictTo('Organiser', 'Admin'), upload.fields
 // @route   PUT /api/events/:id
 // @desc    Update an event
 // @access  Organiser / Admin
-router.put('/:id', authMiddleware, restrictTo('Organiser', 'Admin'), upload.fields([{ name: 'bannerImage', maxCount: 1 }, { name: 'pptTemplate', maxCount: 1 }]), async (req, res) => {
+router.put('/:id', authMiddleware, restrictTo('Organiser', 'Admin'), upload.fields([{ name: 'bannerImage', maxCount: 1 }, { name: 'pptTemplate', maxCount: 1 }, { name: 'certificateTemplate', maxCount: 1 }]), async (req, res) => {
     try {
         const eventId = req.params.id;
         let event = await Event.findById(eventId);
@@ -91,10 +95,23 @@ router.put('/:id', authMiddleware, restrictTo('Organiser', 'Admin'), upload.fiel
             if (req.files.pptTemplate) {
                 updates.pptTemplateUrl = '/uploads/' + req.files.pptTemplate[0].filename;
             }
+            if (req.files.certificateTemplate) {
+                if (typeof updates.certificateConfig === 'string') updates.certificateConfig = JSON.parse(updates.certificateConfig);
+                if (!updates.certificateConfig) updates.certificateConfig = {};
+                updates.certificateConfig.templateUrl = '/uploads/' + req.files.certificateTemplate[0].filename;
+            }
         }
 
         if (updates.teamSize && typeof updates.teamSize === 'string') {
             updates.teamSize = JSON.parse(updates.teamSize);
+        }
+
+        if (updates.certificateConfig && typeof updates.certificateConfig === 'string') {
+            updates.certificateConfig = JSON.parse(updates.certificateConfig);
+            // Re-apply template URL if it was uploaded just now to avoid overwrite from stringified JSON
+            if (req.files && req.files.certificateTemplate) {
+                updates.certificateConfig.templateUrl = '/uploads/' + req.files.certificateTemplate[0].filename;
+            }
         }
 
         event = await Event.findByIdAndUpdate(eventId, updates, { new: true });
@@ -122,6 +139,33 @@ router.delete('/:id', authMiddleware, restrictTo('Admin', 'Organiser'), async (r
         res.json({ message: 'Event deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: 'Server error during deletion' });
+    }
+});
+
+// @route   PUT /api/events/:id/complete
+// @desc    Mark event as completed
+// @access  Organiser / Admin
+router.put('/:id/complete', authMiddleware, restrictTo('Organiser', 'Admin'), async (req, res) => {
+    try {
+        const eventId = req.params.id;
+        const event = await Event.findById(eventId);
+        if (!event) return res.status(404).json({ error: 'Event not found' });
+
+        if (req.user.role === 'Organiser' && event.organiser.toString() !== req.user.id) {
+            return res.status(403).json({ error: 'Not authorized to complete this event' });
+        }
+
+        if (event.status !== 'Ongoing') {
+            return res.status(400).json({ error: 'Only ongoing events can be marked as completed' });
+        }
+
+        event.status = 'Completed';
+        event.completedAt = new Date();
+        await event.save();
+
+        res.json({ message: 'Event marked as completed successfully', event });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error marking event as completed' });
     }
 });
 

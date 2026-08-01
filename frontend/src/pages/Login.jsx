@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { User as UserIcon, Shield, Briefcase, Mail, Lock } from 'lucide-react';
-import { GoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 
 const Login = () => {
@@ -22,31 +21,6 @@ const Login = () => {
     };
 
     const theme = getRoleTheme();
-
-    const handleGoogleSuccess = async (credentialResponse) => {
-        try {
-            const res = await axios.post('http://localhost:5000/api/auth/google', {
-                token: credentialResponse.credential,
-                role: role.charAt(0).toUpperCase() + role.slice(1) // e.g. 'Admin'
-            });
-
-            if (res.data.token) {
-                localStorage.setItem('token', res.data.token);
-                localStorage.setItem('user', JSON.stringify(res.data.user));
-                navigate(`/${role}-dashboard`);
-            }
-        } catch (err) {
-            if (err.code === 'ERR_NETWORK') {
-                setError('Backend Unreachable: Check if server is running and MongoDB Atlas IP is whitelisted.');
-            } else {
-                setError(err.response?.data?.error || 'Authentication Failed');
-            }
-        }
-    };
-
-    const handleGoogleError = () => {
-        setError('Google Login Failed');
-    };
 
     const handleStandardLogin = async (e) => {
         e.preventDefault();
@@ -154,20 +128,6 @@ const Login = () => {
                 </form>
 
                 <div className="flex justify-center flex-col items-center gap-4">
-                    <div className="w-full relative flex items-center my-2 py-2">
-                        <div className="flex-grow border-t border-slate-300"></div>
-                        <span className="flex-shrink-0 mx-4 text-slate-400 text-sm">OR</span>
-                        <div className="flex-grow border-t border-slate-300"></div>
-                    </div>
-
-                    <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={handleGoogleError}
-                        theme="filled_blue"
-                        shape="pill"
-                        size="large"
-                    />
-
                     <button
                         type="button"
                         onClick={handleDevLogin}

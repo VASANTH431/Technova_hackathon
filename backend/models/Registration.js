@@ -10,7 +10,9 @@ const registrationSchema = new mongoose.Schema({
     }],
     status: { type: String, enum: ['Registered', 'Submitted', 'Waitlisted', 'Cancelled'], default: 'Registered' },
     pptSubmissionUrl: { type: String },
-    submittedAt: { type: Date }
+    submittedAt: { type: Date },
+    attendanceVerified: { type: Boolean, default: false },
+    certificateEligible: { type: Boolean, default: false }
 }, { timestamps: true });
 
 // Prevent duplicate registrations for the same event by the same user

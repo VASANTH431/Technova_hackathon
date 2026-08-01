@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { Upload, ArrowRight, Save, Info, Users, Clock, CalendarDays } from 'lucide-react';
+import { Upload, ArrowRight, Save, Info, Users, Clock, CalendarDays, Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 class ErrorBoundary extends React.Component {
@@ -45,6 +45,7 @@ const CreateEventComponent = () => {
         topic: '',
         shortDescription: '',
         detailedDescription: '',
+        instituteName: '',
         venue: '',
         startDate: '',
         endDate: '',
@@ -56,7 +57,18 @@ const CreateEventComponent = () => {
 
     const [files, setFiles] = useState({
         bannerImage: null,
-        pptTemplate: null
+        pptTemplate: null,
+        certificateTemplate: null
+    });
+
+    const [certificateConfig, setCertificateConfig] = useState({
+        enabled: false,
+        fields: [
+            { name: 'participant_name', x: 200, y: 300, fontSize: 32, color: '#000000', label: 'Participant Name' },
+            { name: 'event_name', x: 200, y: 350, fontSize: 24, color: '#4f46e5', label: 'Event Name' },
+            { name: 'date', x: 200, y: 400, fontSize: 18, color: '#64748b', label: 'Issue Date' },
+            { name: 'certificate_id', x: 200, y: 450, fontSize: 14, color: '#94a3b8', label: 'Certificate ID' }
+        ]
     });
 
     const categories = ['Conference', 'Hackathon', 'Competition', 'Meeting', 'Job Offer', 'Online Event', 'Internship'];
@@ -91,6 +103,13 @@ const CreateEventComponent = () => {
                         pptRequired: event.pptRequired || false,
                         status: event.status || 'Published'
                     });
+
+                    if (event.certificateConfig) {
+                        setCertificateConfig({
+                            enabled: event.certificateConfig.enabled || false,
+                            fields: event.certificateConfig.fields?.length > 0 ? event.certificateConfig.fields : certificateConfig.fields
+                        });
+                    }
                 } catch (err) {
                     setError('Failed to fetch event data for editing.');
                 }
@@ -131,6 +150,14 @@ const CreateEventComponent = () => {
         if (formData.pptRequired && files.pptTemplate) {
             submitData.append('pptTemplate', files.pptTemplate);
         }
+        if (certificateConfig.enabled && files.certificateTemplate) {
+            submitData.append('certificateTemplate', files.certificateTemplate);
+        }
+
+        submitData.append('certificateConfig', JSON.stringify({
+            enabled: certificateConfig.enabled,
+            fields: certificateConfig.fields.filter(f => f.x > 0 && f.y > 0)
+        }));
 
         try {
             if (isEditMode) {
@@ -232,13 +259,17 @@ const CreateEventComponent = () => {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Registration Deadline <span className="text-red-500">*</span></label>
                                     <input type="datetime-local" name="registrationEnd" required value={formData.registrationEnd} onChange={handleInputChange} className="w-full rounded-xl border-slate-300 focus:ring-indigo-500 py-3 shadow-sm bg-slate-50" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Venue (Leave blank if Online)</label>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Institute Name</label>
+                                    <input type="text" name="instituteName" value={formData.instituteName} onChange={handleInputChange} className="w-full rounded-xl border-slate-300 focus:ring-indigo-500 py-3 shadow-sm bg-slate-50" placeholder="e.g. Tech University" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Location/Venue</label>
                                     <input type="text" name="venue" value={formData.venue} onChange={handleInputChange} className="w-full rounded-xl border-slate-300 focus:ring-indigo-500 py-3 shadow-sm bg-slate-50" placeholder="e.g. Main Auditorium" />
                                 </div>
                             </div>
@@ -300,6 +331,70 @@ const CreateEventComponent = () => {
                             </div>
                         </div>
 
+                        {/* Step 4: Certificate Configuration */}
+                        <div className={`space-y-8 ${step !== 4 ? 'hidden' : ''}`}>
+                            <div className="border-b border-slate-200 pb-2 mb-6">
+                                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2"><Award className="text-indigo-500" /> Certificate Configuration</h3>
+                                <p className="text-slate-500 text-sm mt-1">Configure automated certificates for eligible participants upon event completion.</p>
+                            </div>
+
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                <label className="flex items-center space-x-3 cursor-pointer">
+                                    <input type="checkbox" checked={certificateConfig.enabled} onChange={(e) => setCertificateConfig({ ...certificateConfig, enabled: e.target.checked })} className="form-checkbox h-6 w-6 text-indigo-600 rounded-md border-slate-300 focus:ring-indigo-500 transition duration-150 ease-in-out" />
+                                    <span className="text-slate-800 font-bold text-lg">Enable Automatic Certificates</span>
+                                </label>
+
+                                <AnimatePresence>
+                                    {certificateConfig.enabled && (
+                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-8 space-y-8 overflow-hidden">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-2">Upload Certificate Template (Blank Background)</label>
+                                                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-xl bg-white hover:bg-slate-50 transition-colors">
+                                                    <div className="space-y-1 text-center">
+                                                        <Upload className="mx-auto h-10 w-10 text-slate-400" />
+                                                        <div className="flex text-sm text-slate-600 justify-center">
+                                                            <label htmlFor="certificateTemplate" className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none">
+                                                                <span>Upload a file</span>
+                                                                <input id="certificateTemplate" name="certificateTemplate" type="file" className="sr-only" onChange={handleFileChange} accept="image/png, image/jpeg, .pdf" />
+                                                            </label>
+                                                        </div>
+                                                        <p className="text-xs text-slate-500 text-center">{files.certificateTemplate ? files.certificateTemplate.name : "PNG, JPG or PDF up to 10MB"}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                                                <h4 className="font-bold text-slate-700 mb-4">Placeholder Coordinates (X, Y)</h4>
+                                                <p className="text-sm text-slate-500 mb-6">Configure the exact X (horizontal) and Y (vertical) coordinates for your text overlays on the final PDF layout. Point 0,0 is at the bottom-left corner of the A4 page layout (842 x 595).</p>
+
+                                                <div className="space-y-4">
+                                                    {certificateConfig.fields.map((field, idx) => (
+                                                        <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                                            <div className="col-span-1 border-r border-slate-200">
+                                                                <span className="font-semibold text-slate-700 text-sm">{field.label}</span>
+                                                            </div>
+                                                            <div className="col-span-1 flex gap-2 items-center">
+                                                                <span className="text-xs font-bold text-slate-400">X:</span>
+                                                                <input type="number" value={field.x} onChange={e => { const newF = [...certificateConfig.fields]; newF[idx].x = Number(e.target.value); setCertificateConfig({ ...certificateConfig, fields: newF }) }} className="w-full text-sm form-input rounded-md border-slate-300" />
+                                                            </div>
+                                                            <div className="col-span-1 flex gap-2 items-center">
+                                                                <span className="text-xs font-bold text-slate-400">Y:</span>
+                                                                <input type="number" value={field.y} onChange={e => { const newF = [...certificateConfig.fields]; newF[idx].y = Number(e.target.value); setCertificateConfig({ ...certificateConfig, fields: newF }) }} className="w-full text-sm form-input rounded-md border-slate-300" />
+                                                            </div>
+                                                            <div className="col-span-1 flex gap-2 items-center">
+                                                                <span className="text-xs font-bold text-slate-400">Pt:</span>
+                                                                <input type="number" value={field.fontSize} onChange={e => { const newF = [...certificateConfig.fields]; newF[idx].fontSize = Number(e.target.value); setCertificateConfig({ ...certificateConfig, fields: newF }) }} className="w-full text-sm form-input rounded-md border-slate-300" />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        </div>
+
                         {/* Navigation Buttons */}
                         <div className="mt-12 pt-6 border-t border-slate-200 flex justify-between">
                             <button
@@ -310,7 +405,7 @@ const CreateEventComponent = () => {
                                 Back
                             </button>
 
-                            {step < 3 ? (
+                            {step < 4 ? (
                                 <button
                                     type="button"
                                     onClick={() => setStep(step + 1)}

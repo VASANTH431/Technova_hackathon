@@ -1,0 +1,46 @@
+remote: error: GH013: Repository rule violations found for refs/heads/main.        
+remote: 
+remote: - GITHUB PUSH PROTECTION        
+remote:   —————————————————————————————————————————        
+remote:     Resolve the following violations before pushing again        
+remote: 
+remote:     - Push cannot contain secrets        
+remote: 
+remote:             
+remote:      (?) Learn how to resolve a blocked push        
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push        
+remote:             
+remote:             
+remote:       —— Google OAuth Client ID ————————————————————————————        
+remote:        locations:        
+remote:          - commit: b3b5e09cb37956f8c8b6bc0ea2d641778a4edd12        
+remote:            path: backend/.env:3        
+remote:          - commit: 62b2d5699e0107bb73919b4a03391e7fc8e56c41        
+remote:            path: backend/.env:3        
+remote:             
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.        
+remote:        https://github.com/VASANTH431/Technova_hackathon/security/secret-scanning/unblock-secret/3HIdWvszq5HN4rMaamYXA9z8J8g        
+remote:             
+remote:             
+remote:       —— Google OAuth Client Secret ————————————————————————        
+remote:        locations:        
+remote:          - commit: 62b2d5699e0107bb73919b4a03391e7fc8e56c41        
+remote:            path: backend/.env:4        
+remote:             
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.        
+remote:        https://github.com/VASANTH431/Technova_hackathon/security/secret-scanning/unblock-secret/3HIdWtoL4hhMfbASRaBfdCEixla        
+remote:             
+remote:             
+remote:       —— Google OAuth Client Secret ————————————————————————        
+remote:        locations:        
+remote:          - commit: b3b5e09cb37956f8c8b6bc0ea2d641778a4edd12        
+remote:            path: backend/.env:4        
+remote:             
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.        
+remote:        https://github.com/VASANTH431/Technova_hackathon/security/secret-scanning/unblock-secret/3HIdWt14Ki1ddFNPt8t96p97inZ        
+remote:             
+remote: 
+remote: 
+To https://github.com/VASANTH431/Technova_hackathon.git
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/VASANTH431/Technova_hackathon.git'

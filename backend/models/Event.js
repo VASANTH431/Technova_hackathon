@@ -15,6 +15,7 @@ const eventSchema = new mongoose.Schema({
     registrationEnd: { type: Date },
     submissionDeadline: { type: Date },
     venue: { type: String },
+    instituteName: { type: String },
     googleMapsLocation: { type: String },
     onlineMeetingLink: { type: String },
     organiser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -26,6 +27,19 @@ const eventSchema = new mongoose.Schema({
     requiredSkills: [{ type: String }],
     prizeDetails: { type: String },
     certificateAvailable: { type: Boolean, default: false },
+    certificateConfig: {
+        enabled: { type: Boolean, default: false },
+        templateUrl: { type: String },
+        fields: [{
+            name: { type: String },
+            x: { type: Number },
+            y: { type: Number },
+            fontSize: { type: Number, default: 24 },
+            color: { type: String, default: '#000000' },
+            fontFamily: { type: String, default: 'Helvetica' },
+            align: { type: String, default: 'left' }
+        }]
+    },
     registrationFee: { type: Number, default: 0 },
     teamSize: {
         min: { type: Number, default: 1 },
@@ -39,7 +53,8 @@ const eventSchema = new mongoose.Schema({
         question: { type: String },
         answer: { type: String }
     }],
-    status: { type: String, enum: ['Draft', 'Published', 'Cancelled'], default: 'Draft' }
+    status: { type: String, enum: ['Draft', 'Pending Approval', 'Published', 'Ongoing', 'Completed', 'Cancelled'], default: 'Draft' },
+    completedAt: { type: Date }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Event', eventSchema);
