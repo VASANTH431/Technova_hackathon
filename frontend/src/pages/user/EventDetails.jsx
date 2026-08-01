@@ -20,6 +20,11 @@ const EventDetails = () => {
     const [pptFile, setPptFile] = useState(null);
 
     useEffect(() => {
+        const script = document.createElement('script');
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.async = true;
+        document.body.appendChild(script);
+
         const fetchEvent = async () => {
             try {
                 const token = localStorage.getItem('token');
@@ -65,33 +70,104 @@ const EventDetails = () => {
             return;
         }
 
-        try {
-            const token = localStorage.getItem('token');
-            const submitData = new FormData();
+        const isPaid = event.registrationFee && event.registrationFee > 0;
 
-            if (event.eventType === 'Team') {
-                submitData.append('teamName', teamName);
-                submitData.append('teamMembers', JSON.stringify(teamMembers));
-            }
-            if (pptFile) {
-                submitData.append('pptSubmission', pptFile);
-            }
+        const executeRegistration = async (paymentDetails = {}) => {
+            try {
+                const token = localStorage.getItem('token');
+                const submitData = new FormData();
 
-            await axios.post(`http://localhost:5000/api/registrations/${id}/register`, submitData, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'multipart/form-data'
+                if (event.eventType === 'Team') {
+                    submitData.append('teamName', teamName);
+                    submitData.append('teamMembers', JSON.stringify(teamMembers));
                 }
-            });
+                if (pptFile) submitData.append('pptSubmission', pptFile);
+                if (paymentDetails.razorpayPaymentId) submitData.append('razorpayPaymentId', paymentDetails.razorpayPaymentId);
+                if (paymentDetails.razorpayOrderId) submitData.append('razorpayOrderId', paymentDetails.razorpayOrderId);
+                if (paymentDetails.razorpaySignature) submitData.append('razorpaySignature', paymentDetails.razorpaySignature);
 
-            setSuccess('Successfully registered and submitted!');
-            setTeamName('');
-            setTeamMembers([{ name: '', email: '' }]);
-            setPptFile(null);
-        } catch (err) {
-            setError(err.response?.data?.error || 'Registration failed');
-        } finally {
-            setRegistering(false);
+                await axios.post(`http://localhost:5000/api/registrations/${id}/register`, submitData, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'multipart/form-data'
+                    }
+                });
+
+                setSuccess('Successfully registered and submitted!');
+                setTeamName('');
+                setTeamMembers([{ name: '', email: '' }]);
+                setPptFile(null);
+
+                // Automatically set as registered
+                setIsRegistered(true);
+            } catch (err) {
+                setError(err.response?.data?.error || 'Registration failed');
+            } finally {
+                setRegistering(false);
+            }
+        };
+
+        if (isPaid) {
+            try {
+                const token = localStorage.getItem('token');
+                const reqRes = await axios.post(`http://localhost:5000/api/payments/create-order`, {
+                    amount: event.registrationFee,
+                    currency: "INR"
+                }, { headers: { Authorization: `Bearer ${token}` } });
+
+                const data = reqRes.data;
+
+                const options = {
+                    key: 'rzp_test_TKZWZNKj2aUzvd',
+                    amount: data.amount,
+                    currency: data.currency,
+                    name: "Event Booking Platform",
+                    description: `Payment for ${event.title}`,
+                    order_id: data.id,
+                    handler: async function (response) {
+                        try {
+                            const verifyRes = await axios.post(`http://localhost:5000/api/payments/verify-payment`, {
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature
+                            }, { headers: { Authorization: `Bearer ${token}` } });
+
+                            if (verifyRes.data.success) {
+                                await executeRegistration({
+                                    razorpayPaymentId: response.razorpay_payment_id,
+                                    razorpayOrderId: response.razorpay_order_id,
+                                    razorpaySignature: response.razorpay_signature
+                                });
+                            } else {
+                                setError("Payment validation failed.");
+                                setRegistering(false);
+                            }
+                        } catch (err) {
+                            setError('Payment verification failed.');
+                            setRegistering(false);
+                        }
+                    },
+                    theme: { color: "#4f46e5" },
+                    modal: { ondismiss: function () { setRegistering(false); } }
+                };
+
+                const rzp1 = new window.Razorpay(options);
+                rzp1.open();
+            } catch (err) {
+                console.error("Payment initialization error:", err);
+                const backendMsg = err.response?.data?.message || err.response?.data?.error;
+                const errMsg = backendMsg || err.message || 'Failed to initialize payment.';
+
+                if (!window.Razorpay) {
+                    setError('Payment failed: Razorpay script failed to load. Check your internet connection.');
+                    setRegistering(false);
+                } else {
+                    setError(`Payment initialization failed: ${errMsg}`);
+                    setRegistering(false);
+                }
+            }
+        } else {
+            executeRegistration();
         }
     };
 
@@ -190,6 +266,13 @@ const EventDetails = () => {
                                         <p className="text-sm text-slate-600">{event.eventType} Only</p>
                                     </div>
                                 </li>
+                                <li className="flex items-start">
+                                    <div className="flex-shrink-0 mt-1"><AlertCircle className="h-6 w-6 text-indigo-500" /></div>
+                                    <div className="ml-4">
+                                        <p className="text-sm font-semibold text-slate-900">Registration Fee</p>
+                                        <p className="text-sm text-slate-600 font-bold">{event.registrationFee > 0 ? `INR ${event.registrationFee}` : 'Free'}</p>
+                                    </div>
+                                </li>
                                 {event.registrationEnd && (
                                     <li className="flex items-start">
                                         <div className="flex-shrink-0 mt-1"><Clock className="h-6 w-6 text-rose-500" /></div>
@@ -236,7 +319,29 @@ const EventDetails = () => {
                                             </div>
                                         )}
                                     </div>
-                                    <Link to="/user-dashboard" className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition-all text-sm">
+                                    {userRegistration && userRegistration.paymentStatus === 'Completed' && (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    const token = localStorage.getItem('token');
+                                                    const res = await axios.get(`http://localhost:5000/api/payments/receipt/${userRegistration._id}`, {
+                                                        headers: { Authorization: `Bearer ${token}` },
+                                                        responseType: 'blob'
+                                                    });
+                                                    const url = window.URL.createObjectURL(new Blob([res.data]));
+                                                    const link = document.createElement('a');
+                                                    link.href = url;
+                                                    link.setAttribute('download', `receipt_${userRegistration._id}.pdf`);
+                                                    document.body.appendChild(link);
+                                                    link.click();
+                                                    link.remove();
+                                                } catch (e) { alert('Failed to download receipt.'); }
+                                            }}
+                                            className="w-full flex items-center justify-center bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition-all text-sm mb-3">
+                                            <Download className="h-4 w-4 mr-2" /> Download Payment Receipt
+                                        </button>
+                                    )}
+                                    <Link to="/user-dashboard" className="block w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition-all text-sm text-center">
                                         Go to Dashboard
                                     </Link>
                                 </div>

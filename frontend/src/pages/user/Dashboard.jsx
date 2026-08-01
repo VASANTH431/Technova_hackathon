@@ -105,7 +105,7 @@ const UserDashboard = () => {
                     axios.get('http://localhost:5000/api/registrations/my', { headers: { Authorization: `Bearer ${token}` } })
                 ]);
 
-                setEvents(eventRes.data.filter(e => e.status === 'Published'));
+                setEvents(eventRes.data.filter(e => ['Published', 'Ongoing', 'Completed'].includes(e.status)));
                 setRegistrations(regRes.data);
 
                 setLoading(false);
@@ -304,6 +304,16 @@ const UserDashboard = () => {
                                                 <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-indigo-700 uppercase tracking-wide shadow-sm">
                                                     {event.category}
                                                 </div>
+                                                {event.status === 'Completed' && (
+                                                    <div className="absolute top-4 right-4 bg-emerald-500/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-white uppercase tracking-wide shadow-sm flex items-center border border-white/20">
+                                                        <CheckCircle size={12} className="mr-1" /> Completed
+                                                    </div>
+                                                )}
+                                                {event.status === 'Ongoing' && (
+                                                    <div className="absolute top-4 right-4 bg-amber-500/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-white uppercase tracking-wide shadow-sm flex items-center border border-white/20">
+                                                        <Clock size={12} className="mr-1 shadow-sm" /> Ongoing
+                                                    </div>
+                                                )}
                                                 <div className="absolute bottom-4 right-4 bg-slate-900/80 backdrop-blur-sm px-3 py-1.5 rounded-xl text-xs font-bold text-white flex items-center shadow-lg border border-white/10">
                                                     <Calendar size={14} className="mr-1.5" />
                                                     {new Date(event.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}

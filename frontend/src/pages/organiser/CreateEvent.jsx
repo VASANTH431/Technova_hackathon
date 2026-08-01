@@ -56,7 +56,9 @@ const CreateEventComponent = () => {
         registrationEnd: '',
         submissionDeadline: '',
         pptRequired: false,
-        status: 'Published'
+        status: 'Published',
+        isFree: true,
+        registrationFee: 0
     });
 
     const [files, setFiles] = useState({
@@ -105,7 +107,9 @@ const CreateEventComponent = () => {
                         registrationEnd: formatDate(event.registrationEnd),
                         submissionDeadline: formatDate(event.submissionDeadline),
                         pptRequired: event.pptRequired || false,
-                        status: event.status || 'Published'
+                        status: event.status || 'Published',
+                        isFree: !event.registrationFee || event.registrationFee === 0,
+                        registrationFee: event.registrationFee || 0
                     });
 
                     if (event.certificateConfig) {
@@ -243,6 +247,26 @@ const CreateEventComponent = () => {
                                         </label>
                                     ))}
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">Event Ticket Type <span className="text-red-500">*</span></label>
+                                <div className="flex gap-4">
+                                    {['Free', 'Paid'].map(type => (
+                                        <label key={type} className={`flex-1 flex items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.isFree === (type === 'Free') ? 'border-indigo-600 bg-indigo-50 text-indigo-700 font-bold' : 'border-slate-200 hover:border-indigo-300 text-slate-600'}`}>
+                                            <input type="radio" name="isFree" value={type === 'Free'} checked={formData.isFree === (type === 'Free')} onChange={() => setFormData({ ...formData, isFree: type === 'Free', registrationFee: type === 'Free' ? 0 : formData.registrationFee })} className="sr-only" />
+                                            {type} Event
+                                        </label>
+                                    ))}
+                                </div>
+                                <AnimatePresence>
+                                    {!formData.isFree && (
+                                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-4">
+                                            <label className="block text-sm font-semibold text-slate-700 mb-2">Registration Fee (INR) <span className="text-red-500">*</span></label>
+                                            <input type="number" min="1" name="registrationFee" required={!formData.isFree} value={formData.registrationFee} onChange={handleInputChange} className="w-full rounded-xl border-slate-300 focus:ring-indigo-500 py-3 shadow-sm bg-slate-50" placeholder="e.g. 500" />
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
 

@@ -14,9 +14,9 @@ const Notification = require('../models/Notification');
 const { authMiddleware, restrictTo } = require('../middleware/auth');
 
 // Helper to safely get mapped field names
-const getFieldValue = (fieldName, reg, event) => {
+const getFieldValue = (fieldName, p, event) => {
     switch (fieldName) {
-        case 'participant_name': return reg.user?.name || 'Participant';
+        case 'participant_name': return p.participantName || 'Participant';
         case 'event_name': return event.title;
         case 'organizer_name': return event.organiserName || 'Organizer';
         case 'date': return new Date(event.startDate).toLocaleDateString();
@@ -46,11 +46,10 @@ router.post('/generate/:eventId', authMiddleware, restrictTo('Organiser', 'Admin
             return res.status(400).json({ error: 'Certificates are not configured or enabled for this event' });
         }
 
+        // Query to match root level eligibility OR any team member eligibility
         const eligibleRegistrations = await Registration.find({
             event: eventId,
-            status: { $in: ['Registered', 'Submitted'] },
-            attendanceVerified: true,
-            certificateEligible: true
+            status: { $in: ['Registered', 'Submitted'] }
         }).populate('user');
 
         const certsDir = path.join(__dirname, '..', 'uploads', 'certificates');
@@ -63,8 +62,36 @@ router.post('/generate/:eventId', authMiddleware, restrictTo('Organiser', 'Admin
 
         let generatedCount = 0;
 
+        // Flatten list of eligible participants
+        let participantsToGenerate = [];
         for (const reg of eligibleRegistrations) {
-            const existingCert = await Certificate.findOne({ event: eventId, user: reg.user._id });
+            if (reg.attendanceVerified && reg.certificateEligible) {
+                participantsToGenerate.push({
+                    userObjId: reg.user._id,
+                    participantName: reg.user.name,
+                    participantEmail: reg.user.email,
+                    certIdSuffix: reg.user._id.toString(),
+                    isRootUser: true
+                });
+            }
+            if (reg.teamMembers && reg.teamMembers.length > 0) {
+                for (const member of reg.teamMembers) {
+                    if (member.attendanceVerified && member.certificateEligible) {
+                        const hash = require('crypto').createHash('md5').update(member.email || member.name || member._id?.toString() || 'unknown').digest('hex').substring(0, 24);
+                        participantsToGenerate.push({
+                            userObjId: hash,
+                            participantName: member.name || 'Team Member',
+                            participantEmail: member.email || '',
+                            certIdSuffix: (member._id || hash).toString(),
+                            isRootUser: false
+                        });
+                    }
+                }
+            }
+        }
+
+        for (const p of participantsToGenerate) {
+            const existingCert = await Certificate.findOne({ event: eventId, user: p.userObjId });
             if (existingCert) {
                 try {
                     const oldPath = path.join(__dirname, '..', existingCert.pdfUrl);
@@ -75,7 +102,7 @@ router.post('/generate/:eventId', authMiddleware, restrictTo('Organiser', 'Admin
                 await existingCert.deleteOne();
             }
 
-            const certId = uuidv4().split('-')[0].toUpperCase() + '-' + Date.now().toString().slice(-6);
+            const certId = uuidv4().split('-')[0].toUpperCase() + '-' + p.certIdSuffix.slice(-6);
 
             // Generate QR
             const verifyUrl = `${req.protocol}://${req.get('host')}/api/certificates/verify/${certId}`;
@@ -135,7 +162,7 @@ router.post('/generate/:eventId', authMiddleware, restrictTo('Organiser', 'Admin
 
                 // Extract strings for this Y coordinate and join them by comma
                 const strings = group.fields.map(field => {
-                    let txt = field.name === 'certificate_id' ? certId : getFieldValue(field.name, reg, event);
+                    let txt = field.name === 'certificate_id' ? certId : getFieldValue(field.name, p, event);
                     return txt || '';
                 }).filter(t => t.length > 0);
 
@@ -161,21 +188,25 @@ router.post('/generate/:eventId', authMiddleware, restrictTo('Organiser', 'Admin
 
             const certificate = new Certificate({
                 certificateId: certId,
-                user: reg.user._id,
+                user: p.userObjId,
+                participantName: p.participantName,
+                participantEmail: p.participantEmail,
                 event: eventId,
                 pdfUrl: `/uploads/certificates/${pdfFilename}`,
                 qrCodeUrl: qrCodeDataUrl
             });
             await certificate.save();
 
-            const notification = new Notification({
-                user: reg.user._id,
-                title: 'Certificate Ready',
-                message: `🎉 Your certificate for ${event.title} is ready to download.`,
-                type: 'Certificate Ready',
-                actionUrl: `/my-certificates`
-            });
-            await notification.save();
+            if (p.isRootUser) {
+                const notification = new Notification({
+                    user: p.userObjId,
+                    title: 'Certificate Ready',
+                    message: `🎉 Your certificate for ${event.title} is ready to download.`,
+                    type: 'Certificate Ready',
+                    actionUrl: `/my-certificates`
+                });
+                await notification.save();
+            }
 
             generatedCount++;
         }
@@ -212,7 +243,7 @@ router.get('/verify/:certificateId', async (req, res) => {
 
         res.json({
             valid: true,
-            participantName: cert.user.name,
+            participantName: cert.participantName || (cert.user ? cert.user.name : 'Participant'),
             eventName: cert.event.title,
             organizerName: cert.event.organiserName,
             issueDate: cert.issueDate,

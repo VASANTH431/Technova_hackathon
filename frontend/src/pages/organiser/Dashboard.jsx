@@ -85,6 +85,18 @@ const EventListItem = ({ event, onUpdateEvent }) => {
         }
     };
 
+    const updateMemberEligibility = async (regId, memberId, field, value) => {
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.put(`http://localhost:5000/api/registrations/${regId}/member/${memberId}/eligibility`, { [field]: value }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setRegistrants(registrants.map(r => r._id === regId ? res.data : r));
+        } catch (err) {
+            alert('Failed to update member eligibility');
+        }
+    };
+
     const handleGenerateCertificates = async () => {
         if (!confirm('Are you sure you want to generate certificates for all eligible participants?')) return;
         setGenerating(true);
@@ -240,10 +252,22 @@ const EventListItem = ({ event, onUpdateEvent }) => {
                                                     <p className="text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">Team Roster</p>
                                                     <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                                         {reg.teamMembers.map((member, idx) => (
-                                                            <li key={idx} className="flex items-center text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded-md p-2 shadow-sm">
-                                                                <User className="h-3 w-3 text-indigo-400 mr-2 shrink-0" />
-                                                                <span className="font-semibold truncate max-w-[45%]">{member.name || 'Unnamed'}</span>
-                                                                <span className="text-slate-400 ml-1 text-xs truncate">- {member.email || 'No email'}</span>
+                                                            <li key={idx} className="flex flex-col text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded-md p-2 shadow-sm gap-2">
+                                                                <div className="flex items-center">
+                                                                    <User className="h-3 w-3 text-indigo-400 mr-2 shrink-0" />
+                                                                    <span className="font-semibold truncate max-w-[45%]">{member.name || 'Unnamed'}</span>
+                                                                    <span className="text-slate-400 ml-1 text-xs truncate">- {member.email || 'No email'}</span>
+                                                                </div>
+                                                                {event.certificateConfig?.enabled && (
+                                                                    <div className="flex gap-2">
+                                                                        <button onClick={() => updateMemberEligibility(reg._id, member._id, 'attendanceVerified', !member.attendanceVerified)} className={`text-xs px-2 py-1 rounded font-bold border transition-colors flex items-center ${member.attendanceVerified ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                                            <CheckCircle className="h-3 w-3 mr-1" /> Attendance
+                                                                        </button>
+                                                                        <button onClick={() => updateMemberEligibility(reg._id, member._id, 'certificateEligible', !member.certificateEligible)} className={`text-xs px-2 py-1 rounded font-bold border transition-colors flex items-center ${member.certificateEligible ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                                            <Award className="h-3 w-3 mr-1" /> Eligible
+                                                                        </button>
+                                                                    </div>
+                                                                )}
                                                             </li>
                                                         ))}
                                                     </ul>

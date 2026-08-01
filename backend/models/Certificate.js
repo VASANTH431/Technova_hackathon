@@ -4,6 +4,8 @@ const certificateSchema = new mongoose.Schema({
     certificateId: { type: String, required: true, unique: true },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     event: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
+    participantName: { type: String },
+    participantEmail: { type: String },
     pdfUrl: { type: String, required: true },
     issueDate: { type: Date, default: Date.now },
     qrCodeUrl: { type: String, required: true }

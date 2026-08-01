@@ -12,7 +12,7 @@ router.post('/:eventId/register', authMiddleware, upload.single('pptSubmission')
     try {
         const eventId = req.params.eventId;
         const userId = req.user.id;
-        const { teamName } = req.body;
+        const { teamName, razorpayPaymentId, razorpayOrderId } = req.body;
         let { teamMembers } = req.body;
 
         if (teamMembers && typeof teamMembers === 'string') {
@@ -34,11 +34,19 @@ router.post('/:eventId/register', authMiddleware, upload.single('pptSubmission')
         const existingReg = await Registration.findOne({ event: eventId, user: userId });
         if (existingReg) return res.status(400).json({ error: 'You are already registered for this event' });
 
+        const isPaidEvent = event.registrationFee && event.registrationFee > 0;
+        if (isPaidEvent && (!razorpayPaymentId || !razorpayOrderId)) {
+            return res.status(400).json({ error: 'Payment is required to register for this event.' });
+        }
+
         const registration = new Registration({
             event: eventId,
             user: userId,
             teamName: teamName || null,
-            teamMembers: teamMembers || []
+            teamMembers: teamMembers || [],
+            razorpayPaymentId: isPaidEvent ? razorpayPaymentId : undefined,
+            razorpayOrderId: isPaidEvent ? razorpayOrderId : undefined,
+            paymentStatus: isPaidEvent ? 'Completed' : 'Not Required'
         });
 
         if (req.file) {
@@ -132,6 +140,33 @@ router.put('/:id/eligibility', authMiddleware, restrictTo('Organiser', 'Admin'),
         res.json(registration);
     } catch (error) {
         res.status(500).json({ error: 'Server error updating eligibility' });
+    }
+});
+
+// @route   PUT /api/registrations/:id/member/:memberId/eligibility
+// @desc    Update attendance and certificate eligibility for a team member
+// @access  Organiser / Admin
+router.put('/:id/member/:memberId/eligibility', authMiddleware, restrictTo('Organiser', 'Admin'), async (req, res) => {
+    try {
+        const { attendanceVerified, certificateEligible } = req.body;
+        const registration = await Registration.findById(req.params.id).populate('event');
+
+        if (!registration) return res.status(404).json({ error: 'Registration not found' });
+
+        if (req.user.role === 'Organiser' && registration.event.organiser.toString() !== req.user.id) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+
+        const member = registration.teamMembers.id(req.params.memberId);
+        if (!member) return res.status(404).json({ error: 'Team member not found' });
+
+        if (attendanceVerified !== undefined) member.attendanceVerified = attendanceVerified;
+        if (certificateEligible !== undefined) member.certificateEligible = certificateEligible;
+
+        await registration.save();
+        res.json(registration);
+    } catch (error) {
+        res.status(500).json({ error: 'Server error updating team member eligibility' });
     }
 });
 
