@@ -1,8 +1,8 @@
 <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6;">
 
-# Technical Specification & System Design Document
+# Event Booking Platform
 
-**Project Name:** EventSphere Platform  
+**Project Name:** Event Booking Platform  
 **Document Version:** 1.0.0  
 **Classification:** Confidential / Enterprise Architecture  
 
