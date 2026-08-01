@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Calendar, User, AlignRight } from 'lucide-react';
 
 const Navbar = () => {
+    const location = useLocation(); // Hook to trigger re-renders on route changes
     return (
         <nav className="fixed w-full z-50 top-0 start-0 glass border-b border-white/20 transition-all duration-300 py-3">
             <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -16,9 +17,20 @@ const Navbar = () => {
                     </span>
                 </Link>
                 <div className="flex md:order-2 space-x-3 rtl:space-x-reverse">
-                    <Link to="/signup" className="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2 text-center transition-all shadow-md shadow-blue-500/30">
-                        Sign Up
-                    </Link>
+                    {localStorage.getItem('token') ? (
+                        <>
+                            <Link to="/profile" className="text-slate-600 hover:text-blue-600 font-medium px-4 py-2 transition-colors flex items-center gap-1">
+                                <User size={18} /> Profile
+                            </Link>
+                            <button onClick={() => { localStorage.clear(); window.location.href = '/'; }} className="text-white bg-slate-800 hover:bg-slate-900 font-medium rounded-full text-sm px-5 py-2 transition-all shadow-md">
+                                Logout
+                            </button>
+                        </>
+                    ) : (
+                        <Link to="/signup" className="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2 text-center transition-all shadow-md shadow-blue-500/30">
+                            Sign Up
+                        </Link>
+                    )}
                     <button data-collapse-toggle="navbar-sticky" type="button" className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-slate-500 rounded-lg md:hidden hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-200">
                         <span className="sr-only">Open main menu</span>
                         <AlignRight size={24} />

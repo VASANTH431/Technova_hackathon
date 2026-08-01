@@ -1,5 +1,6 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
 
@@ -67,22 +68,27 @@ router.post('/google', async (req, res) => {
 // Signup Flow without auth restrictions for now
 router.post('/signup', async (req, res) => {
     try {
-        const { name, email, role } = req.body;
+        const { name, email, role, password, phoneNumber, interestedAreas } = req.body;
 
         let user = await User.findOne({ email });
         if (user) {
             return res.status(400).json({ error: 'User with this email already exists' });
         }
 
+        const hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
+
         user = await User.create({
             name,
             email,
             role,
+            password: hashedPassword,
+            phoneNumber,
+            interestedAreas,
             googleId: `mock-id-${Date.now()}`
         });
 
         const jwtToken = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
-        res.json({ token: jwtToken, user: { id: user._id, name: user.name, email: user.email, role: user.role, picture: '' } });
+        res.json({ token: jwtToken, user: { id: user._id, name: user.name, email: user.email, role: user.role, picture: user.profileImage || '' } });
     } catch (error) {
         console.error('Signup error:', error);
         res.status(500).json({ error: 'Signup failed' });
@@ -110,6 +116,33 @@ router.post('/dev-login', async (req, res) => {
     } catch (error) {
         console.error('Dev login error:', error);
         res.status(500).json({ error: 'Bypass login failed' });
+    }
+});
+
+// Standard Email/Password Login
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        if (!user.password) {
+            return res.status(401).json({ error: 'Please login with Google' });
+        }
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
+        const jwtToken = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1d' });
+        res.json({ token: jwtToken, user: { id: user._id, name: user.name, email: user.email, role: user.role, picture: user.profileImage || '' } });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Login failed' });
     }
 });
 

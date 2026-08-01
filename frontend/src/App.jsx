@@ -9,6 +9,7 @@ import CreateEvent from './pages/organiser/CreateEvent';
 import UserDashboard from './pages/user/Dashboard';
 import EventDetails from './pages/user/EventDetails';
 import AdminDashboard from './pages/admin/Dashboard';
+import Profile from './pages/user/Profile';
 import { useEffect } from 'react';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
               <Route path="/user-dashboard" element={<UserDashboard />} />
               <Route path="/events/:id" element={<EventDetails />} />
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/profile" element={<Profile />} />
               {/* Additional routes will be added here */}
             </Routes>
           </main>

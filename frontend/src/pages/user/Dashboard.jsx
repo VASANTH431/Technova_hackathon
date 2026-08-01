@@ -11,7 +11,10 @@ const UserDashboard = () => {
     const [activeTab, setActiveTab] = useState('All');
     const navigate = useNavigate();
 
-    const categories = ['All', 'Hackathon', 'Conference', 'Competition', 'Meeting', 'Job Offer', 'Internship'];
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userInterests = user.interestedAreas || [];
+
+    const categories = ['All', 'Recommended', 'Hackathon', 'Conference', 'Competition', 'Meeting', 'Job Offer', 'Internship'];
 
     useEffect(() => {
         const fetchEvents = async () => {
@@ -23,7 +26,7 @@ const UserDashboard = () => {
                     headers: { Authorization: `Bearer ${token}` }
                 });
 
-                // Users only see Published events (handled by backend but filtering just in case)
+                // Users only see Published events
                 setEvents(res.data.filter(e => e.status === 'Published'));
                 setLoading(false);
             } catch (err) {
@@ -34,10 +37,17 @@ const UserDashboard = () => {
         fetchEvents();
     }, [navigate]);
 
-    const filteredEvents = events.filter(e =>
-        (activeTab === 'All' || e.category === activeTab) &&
-        (e.title.toLowerCase().includes(searchTerm.toLowerCase()) || e.shortDescription.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const isRecommended = (event) => {
+        if (!userInterests.length) return true; // If no interests set, everything is recommended
+        const eventText = `${event.title} ${event.category} ${event.topic || ''} ${event.shortDescription}`.toLowerCase();
+        return userInterests.some(interest => eventText.includes(interest.toLowerCase()));
+    };
+
+    const filteredEvents = events.filter(e => {
+        const matchesCategory = activeTab === 'All' ? true : (activeTab === 'Recommended' ? isRecommended(e) : e.category === activeTab);
+        const matchesSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) || e.shortDescription.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesCategory && matchesSearch;
+    });
 
     const getIcon = (category) => {
         switch (category) {
